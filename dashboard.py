@@ -25,21 +25,44 @@ app.layout = html.Div(
     children=[
 
         html.H1(
-            "Student Performance Dashboard",
-            style={
-                "textAlign": "center",
-                "color": "white",
-                "marginBottom": "30px"
-            }
+            "🎓 B.Tech CSE Student Performance Dashboard",
+            style={"textAlign": "center", "color": "white"}
         ),
 
-        # Graph selector
+        # -------- ADD / DELETE SECTION --------
         html.Div(
             style={
                 "background": "white",
                 "padding": "20px",
                 "borderRadius": "12px",
-                "boxShadow": "0 4px 10px rgba(0,0,0,0.15)",
+                "marginBottom": "20px"
+            },
+            children=[
+                html.H3("➕ Add Student Record"),
+
+                dcc.Input(id="add_name", placeholder="Name", type="text"),
+                dcc.Input(id="add_subject", placeholder="Subject", type="text"),
+                dcc.Input(id="add_marks", placeholder="Marks", type="number"),
+                html.Button("Add", id="add_btn", n_clicks=0),
+
+                html.Hr(),
+
+                html.H3("🗑 Delete Student Record"),
+
+                dcc.Input(id="del_name", placeholder="Name", type="text"),
+                dcc.Input(id="del_subject", placeholder="Subject", type="text"),
+                html.Button("Delete", id="del_btn", n_clicks=0),
+
+                html.Div(id="action_msg", style={"marginTop": "10px", "color": "green"})
+            ]
+        ),
+
+        # -------- GRAPH SELECTOR --------
+        html.Div(
+            style={
+                "background": "white",
+                "padding": "20px",
+                "borderRadius": "12px",
                 "marginBottom": "20px"
             },
             children=[
@@ -52,35 +75,27 @@ app.layout = html.Div(
                         {"label": "📈 Subject-wise Line", "value": "line"},
                         {"label": "📋 Marks Table", "value": "table"}
                     ],
-                    value="combined",
-                    style={"borderRadius": "8px"}
+                    value="combined"
                 ),
 
                 html.Br(),
 
                 dcc.Dropdown(
                     id="student_filter",
-                    placeholder="Select Student (for student-wise graph)",
-                    style={"borderRadius": "8px"}
+                    placeholder="Select Student (for student-wise graph)"
                 )
             ]
         ),
 
-        # Graph sections
+        # -------- VISUALS --------
         html.Div(dcc.Graph(id="combined_bar"), id="combined_div"),
         html.Div(dcc.Graph(id="student_bar"), id="student_div"),
         html.Div(dcc.Graph(id="subject_pie"), id="pie_div"),
         html.Div(dcc.Graph(id="subject_line"), id="line_div"),
 
-        # Table section
         html.Div(
             id="table_div",
-            style={
-                "background": "white",
-                "padding": "20px",
-                "borderRadius": "12px",
-                "boxShadow": "0 4px 10px rgba(0,0,0,0.15)"
-            },
+            style={"background": "white", "padding": "20px", "borderRadius": "12px"},
             children=[
                 html.H3("📋 Complete Marks Table"),
                 dash_table.DataTable(
@@ -90,23 +105,19 @@ app.layout = html.Div(
                         {"name": "Subject", "id": "subject"},
                         {"name": "Marks", "id": "marks"}
                     ],
-                    style_cell={
-                        "textAlign": "center",
-                        "padding": "10px"
-                    },
+                    style_cell={"textAlign": "center"},
                     style_header={
                         "backgroundColor": "#667eea",
                         "color": "white",
                         "fontWeight": "bold"
-                    },
-                    style_table={"overflowX": "auto"}
+                    }
                 )
             ]
         )
     ]
 )
 
-# ---------------- CALLBACK ----------------
+# ---------------- MAIN CALLBACK ----------------
 @app.callback(
     Output("student_filter", "options"),
     Output("combined_bar", "figure"),
@@ -133,23 +144,18 @@ def update_dashboard(graph_type, student):
     if df.empty:
         return [], {}, {}, {}, {}, [], hide, hide, hide, hide, hide
 
-    student_options = [
-        {"label": s, "value": s}
-        for s in sorted(df["name"].unique())
-    ]
+    student_options = [{"label": s, "value": s} for s in sorted(df["name"].unique())]
 
     combined_bar = px.bar(
         df, x="name", y="marks", color="subject",
-        title="All Students – Subject-wise Marks",
-        color_discrete_sequence=px.colors.qualitative.Bold
+        title="All Students – Subject-wise Marks"
     )
 
     if student:
         df_student = df[df["name"] == student]
         student_bar = px.bar(
             df_student, x="subject", y="marks",
-            title=f"{student}'s Performance",
-            color_discrete_sequence=px.colors.qualitative.Set2
+            title=f"{student}'s Performance"
         )
     else:
         student_bar = {}
@@ -157,14 +163,12 @@ def update_dashboard(graph_type, student):
     pie_df = df.groupby("subject")["marks"].mean().reset_index()
     subject_pie = px.pie(
         pie_df, names="subject", values="marks",
-        title="Average Marks by Subject",
-        color_discrete_sequence=px.colors.qualitative.Pastel
+        title="Average Marks by Subject"
     )
 
     subject_line = px.line(
         pie_df, x="subject", y="marks",
-        title="Subject-wise Performance Trend",
-        markers=True
+        title="Subject-wise Performance Trend", markers=True
     )
 
     styles = {
@@ -184,6 +188,41 @@ def update_dashboard(graph_type, student):
         df.to_dict("records"),
         *styles[graph_type]
     )
+
+# ---------------- ADD / DELETE CALLBACK ----------------
+@app.callback(
+    Output("action_msg", "children"),
+    Input("add_btn", "n_clicks"),
+    Input("del_btn", "n_clicks"),
+    Input("add_name", "value"),
+    Input("add_subject", "value"),
+    Input("add_marks", "value"),
+    Input("del_name", "value"),
+    Input("del_subject", "value"),
+    prevent_initial_call=True
+)
+def modify_data(add_clicks, del_clicks,
+                add_name, add_subject, add_marks,
+                del_name, del_subject):
+
+    ctx = dash.callback_context
+    button = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    if button == "add_btn" and add_name and add_subject and add_marks is not None:
+        requests.post(
+            "http://127.0.0.1:5000/add_student",
+            json={"name": add_name, "subject": add_subject, "marks": add_marks}
+        )
+        return "✅ Student added successfully"
+
+    if button == "del_btn" and del_name and del_subject:
+        requests.post(
+            "http://127.0.0.1:5000/delete_student",
+            json={"name": del_name, "subject": del_subject}
+        )
+        return "🗑 Student record deleted"
+
+    return "⚠️ Please fill all fields correctly"
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
