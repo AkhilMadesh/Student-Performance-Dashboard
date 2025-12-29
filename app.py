@@ -11,18 +11,18 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-# ---------------- MODEL ----------------
+# MODEL
 class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
     subject = db.Column(db.String(20), nullable=False)
     marks = db.Column(db.Integer, nullable=False)
 
-# ---------------- CREATE TABLES ----------------
+# CREATE TABLES
 with app.app_context():
     db.create_all()
 
-# ---------------- ROUTES ----------------
+# ROUTES 
 @app.route("/students", methods=["GET"])
 def get_students():
     students = Student.query.all()
@@ -55,8 +55,23 @@ def add_bulk():
         db.session.add(student)
     db.session.commit()
     return jsonify({"message": "Bulk students added"})
+    
+@app.route("/delete_student", methods=["POST"])
+def delete_student():
+    data = request.json
+    name = data["name"]
+    subject = data["subject"]
 
-# ---------------- RUN SERVER ----------------
+    student = Student.query.filter_by(name=name, subject=subject).first()
+    if student:
+        db.session.delete(student)
+        db.session.commit()
+        return jsonify({"message": "Student record deleted"})
+    else:
+        return jsonify({"message": "Record not found"})
+
+
+# RUN SERVER
 if __name__ == "__main__":
     print("Starting Flask server...")
     app.run(debug=True)
