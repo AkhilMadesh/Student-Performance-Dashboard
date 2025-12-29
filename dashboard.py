@@ -6,7 +6,7 @@ import requests
 
 app = dash.Dash(__name__)
 
-# ---------------- DATA ----------------
+#DATA
 def load_data():
     try:
         r = requests.get("http://127.0.0.1:5000/students")
@@ -14,7 +14,7 @@ def load_data():
     except:
         return pd.DataFrame()
 
-# ---------------- LAYOUT ----------------
+#LAYOUT
 app.layout = html.Div(
     style={
         "minHeight": "100vh",
@@ -25,11 +25,11 @@ app.layout = html.Div(
     children=[
 
         html.H1(
-            "🎓 B.Tech CSE Student Performance Dashboard",
+            "🎓 Student Performance Dashboard",
             style={"textAlign": "center", "color": "white"}
         ),
 
-        # -------- ADD / DELETE SECTION --------
+        #ADD / DELETE SECTION
         html.Div(
             style={
                 "background": "white",
@@ -57,7 +57,7 @@ app.layout = html.Div(
             ]
         ),
 
-        # -------- GRAPH SELECTOR --------
+        #  GRAPH SELECTOR
         html.Div(
             style={
                 "background": "white",
@@ -87,7 +87,7 @@ app.layout = html.Div(
             ]
         ),
 
-        # -------- VISUALS --------
+        #VISUALS
         html.Div(dcc.Graph(id="combined_bar"), id="combined_div"),
         html.Div(dcc.Graph(id="student_bar"), id="student_div"),
         html.Div(dcc.Graph(id="subject_pie"), id="pie_div"),
@@ -117,7 +117,7 @@ app.layout = html.Div(
     ]
 )
 
-# ---------------- MAIN CALLBACK ----------------
+#MAIN CALLBACK
 @app.callback(
     Output("student_filter", "options"),
     Output("combined_bar", "figure"),
@@ -189,7 +189,7 @@ def update_dashboard(graph_type, student):
         *styles[graph_type]
     )
 
-# ---------------- ADD / DELETE CALLBACK ----------------
+#  ADD / DELETE CALLBACK
 @app.callback(
     Output("action_msg", "children"),
     Input("add_btn", "n_clicks"),
@@ -224,6 +224,6 @@ def modify_data(add_clicks, del_clicks,
 
     return "⚠️ Please fill all fields correctly"
 
-# ---------------- RUN ----------------
+#  RUN 
 if __name__ == "__main__":
     app.run(debug=True)
